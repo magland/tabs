@@ -4,6 +4,8 @@ A small Electron browser with a fixed, configurable set of site tabs in a left s
 
 Built for the workflow where you live inside a handful of web apps (GitHub repos, Gmail, issue trackers) and want a keyboard-driven, predictable way to switch between them.
 
+<img width="1296" height="820" alt="image" src="https://github.com/user-attachments/assets/1ed7f0b4-fff2-4669-b9be-19d829ff0f15" />
+
 ## Features
 
 - One persistent tab per configured site; switching never spawns new tabs
