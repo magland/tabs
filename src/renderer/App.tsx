@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Site } from "../shared/types";
+import type { IconRecord, Site } from "../shared/types";
 import { Sidebar } from "./components/Sidebar";
 import { SitesManager } from "./components/SitesManager";
 import { Toolbar } from "./components/Toolbar";
@@ -9,20 +9,24 @@ export function App() {
   const [sites, setSites] = useState<Site[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [navStates, setNavStates] = useState<Record<string, NavState>>({});
+  const [icons, setIcons] = useState<Record<string, IconRecord>>({});
   const [configPath, setConfigPath] = useState("");
   const [managerOpen, setManagerOpen] = useState(false);
   const refs = useRef<Record<string, WebviewTabHandle | null>>({});
+  const lastFaviconUrl = useRef<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [loaded, p] = await Promise.all([
+      const [loaded, p, cachedIcons] = await Promise.all([
         window.api.getSites(),
         window.api.getConfigPath(),
+        window.api.getIcons(),
       ]);
       if (cancelled) return;
       setSites(loaded);
       setConfigPath(p);
+      setIcons(cachedIcons);
       if (loaded.length > 0) setActiveId(loaded[0].id);
     })();
     return () => {
@@ -32,6 +36,13 @@ export function App() {
 
   const handleNavState = useCallback((id: string, state: NavState) => {
     setNavStates((prev) => ({ ...prev, [id]: state }));
+  }, []);
+
+  const handleFavicon = useCallback(async (id: string, url: string) => {
+    if (lastFaviconUrl.current[id] === url) return;
+    lastFaviconUrl.current[id] = url;
+    const record = await window.api.saveIcon(id, url);
+    if (record) setIcons((prev) => ({ ...prev, [id]: record }));
   }, []);
 
   // Focus the newly-active webview so keyboard input (and subsequent shortcuts)
@@ -91,8 +102,10 @@ export function App() {
       <Sidebar
         sites={sites ?? []}
         activeId={activeId}
+        icons={icons}
         onSelect={setActiveId}
         onManage={() => setManagerOpen(true)}
+        onReorder={handleSave}
         configPath={configPath}
       />
       <div className="main">
@@ -116,6 +129,7 @@ export function App() {
               site={site}
               active={site.id === activeId}
               onNavState={handleNavState}
+              onFavicon={handleFavicon}
             />
           ))}
           {sites && sites.length === 0 ? (

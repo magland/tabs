@@ -9,6 +9,7 @@ import {
 } from "electron";
 import path from "node:path";
 import { configPath, loadConfig, saveConfig } from "./config";
+import { fetchAndSaveIcon, loadAllIcons } from "./icons";
 import type { Site, TabCommand } from "../shared/types";
 
 // Single-instance lock: a second launch (e.g. via a GNOME keyboard shortcut
@@ -122,6 +123,14 @@ app.whenReady().then(async () => {
   ipcMain.handle("sites:save", async (_e, sites: Site[]) => {
     await saveConfig(sites);
   });
+
+  ipcMain.handle("icons:get-all", () => loadAllIcons());
+
+  ipcMain.handle(
+    "icons:save",
+    (_e, payload: { siteId: string; url: string }) =>
+      fetchAndSaveIcon(payload.siteId, payload.url)
+  );
 
   ipcMain.handle("sites:open-config", async () => {
     const file = configPath();

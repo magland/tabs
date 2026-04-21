@@ -12,3 +12,8 @@ export type TabCommand =
   | { type: "switch"; index: number }
   | { type: "next" }
   | { type: "prev" };
+
+export interface IconRecord {
+  mime: string;
+  data: string;
+}

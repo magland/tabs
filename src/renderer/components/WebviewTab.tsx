@@ -24,10 +24,11 @@ interface Props {
   site: Site;
   active: boolean;
   onNavState: (id: string, state: NavState) => void;
+  onFavicon: (id: string, url: string) => void;
 }
 
 export const WebviewTab = forwardRef<WebviewTabHandle, Props>(function WebviewTab(
-  { site, active, onNavState },
+  { site, active, onNavState, onFavicon },
   ref
 ) {
   const wvRef = useRef<WebviewElement | null>(null);
@@ -85,11 +86,19 @@ export const WebviewTab = forwardRef<WebviewTabHandle, Props>(function WebviewTa
     };
     wv.addEventListener("new-window", onNewWindow as EventListener);
 
+    const onFaviconEvent = (e: Event) => {
+      const ev = e as Event & { favicons?: string[] };
+      const first = ev.favicons?.[0];
+      if (first) onFavicon(site.id, first);
+    };
+    wv.addEventListener("page-favicon-updated", onFaviconEvent as EventListener);
+
     return () => {
       events.forEach((ev) => wv.removeEventListener(ev, emit));
       wv.removeEventListener("new-window", onNewWindow as EventListener);
+      wv.removeEventListener("page-favicon-updated", onFaviconEvent as EventListener);
     };
-  }, [site.id, onNavState]);
+  }, [site.id, onNavState, onFavicon]);
 
   return (
     <webview
