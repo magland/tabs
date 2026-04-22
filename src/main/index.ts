@@ -105,7 +105,41 @@ async function createWindow() {
 
 app.whenReady().then(async () => {
   // Pre-warm persistent session so webviews using "persist:tabs" share it.
-  session.fromPartition("persist:tabs");
+  const tabsSession = session.fromPartition("persist:tabs");
+
+  // Strip "Electron/x" and the app name from the UA. Sites that sniff the UA
+  // otherwise serve a degraded path (disabled Web Workers, WebGPU, "unsupported
+  // browser" banners) because they don't recognize the browser string.
+  const chromeUA = tabsSession
+    .getUserAgent()
+    .replace(new RegExp(`\\s?${app.getName()}/\\S+`, "i"), "")
+    .replace(/\s?Electron\/\S+/, "");
+  tabsSession.setUserAgent(chromeUA);
+  app.userAgentFallback = chromeUA;
+
+  // Auto-grant benign permissions so common web features work without a prompt
+  // UI. Sensitive permissions (camera, mic, geolocation, screen capture, HID/
+  // serial/USB) are intentionally omitted — they get denied here, matching a
+  // safer-than-Chrome default rather than silently granting hardware access.
+  const ALLOWED_PERMISSIONS = new Set([
+    "clipboard-read",
+    "clipboard-sanitized-write",
+    "fullscreen",
+    "idle-detection",
+    "mediaKeySystem",
+    "midi",
+    "notifications",
+    "pointerLock",
+    "storage-access",
+    "top-level-storage-access",
+    "window-management",
+  ]);
+  tabsSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(ALLOWED_PERMISSIONS.has(permission));
+  });
+  tabsSession.setPermissionCheckHandler((_wc, permission) => {
+    return ALLOWED_PERMISSIONS.has(permission);
+  });
 
   buildMenu();
 
